@@ -35,7 +35,31 @@ Instrumenting these components is the **ClearML-server**, see [Self-Hosting](htt
 ---
 <div align="center">
 
-**[Sign up](https://app.clear.ml)  &  [Start using](https://clear.ml/docs/) in under 2 minutes**  
+**[Sign up](https://app.clear.ml)  &  [Start using](https://clear.ml/docs/) in under 2 minutes**
+
+
+<table>
+<tbody>
+  <tr>
+    <td>Step 1: Experiment Management</td>
+    <td><a target="_blank" href="https://colab.research.google.com/github/allegroai/clearml/blob/master/docs/tutorials/Getting_Started_1_Experiment_Management.ipynb">
+  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
+</a></td>
+  </tr>
+  <tr>
+    <td>Step 2: Remote Execution Agent Setup</td>
+    <td><a target="_blank" href="https://colab.research.google.com/github/allegroai/clearml/blob/master/docs/tutorials/Getting_Started_2_Setting_Up_Agent.ipynb">
+  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
+</a></td>
+  </tr>
+  <tr>
+    <td>Step 3: Remotely Execute Tasks</td>
+    <td><a target="_blank" href="https://colab.research.google.com/github/allegroai/clearml/blob/master/docs/tutorials/Getting_Started_3_Remote_Execution.ipynb">
+  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
+</a></td>
+  </tr>
+</tbody>
+</table>
 
 </div>
 
@@ -50,7 +74,7 @@ Instrumenting these components is the **ClearML-server**, see [Self-Hosting](htt
     * Full source control info including non-committed local changes
     * Execution environment (including specific packages & versions)
     * Hyper-parameters
-        * ArgParser/[Click](https://github.com/pallets/click/) for command line parameters with currently used values
+        * ArgParser/[Click](https://github.com/pallets/click/)/[PythonFire](https://github.com/google/python-fire) for command line parameters with currently used values
         * Explicit parameters dictionary
         * Tensorflow Defines (absl-py)
         * [Hydra](https://github.com/facebookresearch/hydra) configuration and overrides

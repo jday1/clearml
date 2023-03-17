@@ -674,10 +674,20 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
     def mark_completed(self, ignore_errors=True, status_message=None, force=False):
         # type: (bool, Optional[str], bool) -> ()
         """
-        Manually mark a Task as completed. This will close the running process and will change the Task's status
-        to Completed (Use this function to close and change status of remotely executed tasks).
-        To simply change the Task's status to completed, use task.close()
+        Use this function to close and change status of remotely executed tasks.
+        
+        Closes the current Task, changes its status to "Completed", and terminates the running Python process.
+        This is in contrast to :meth:`Task.close`, which does the first two steps, but does not terminate the running Python process.
 
+        For example, in
+        ```
+        task.mark_completed()
+        from time import sleep
+        sleep(30)
+        print('This text will not be printed!')
+        ```
+        the text will not be printed, because the Python process is immediately terminated.
+        
         :param bool ignore_errors: If True default), ignore any errors raised
         :param bool force: If True, the task status will be changed to `stopped` regardless of the current Task state.
         :param str status_message: Optional, add status change message to the stop request.
@@ -1871,10 +1881,7 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
 
         :return: str: Task status as string (TaskStatusEnum)
         """
-        status, status_message = self._get_status()
-        if self._data:
-            self._data.status = status
-            self._data.status_message = str(status_message)
+        status, status_message = self.get_status_message()
 
         return str(status)
 
@@ -2266,19 +2273,55 @@ class Task(IdObjectBase, AccessMixin, SetupUploadMixin):
             self._files_server = Session.get_files_server_host()
         return self._files_server
 
+    def get_status_message(self):
+        # type: () -> (Optional[str], Optional[str])
+        """
+        Return The task status without refreshing the entire Task object (only the status property)
+        Return also the last message coupled with the status change
+
+        Task Status options: ["created", "in_progress", "stopped", "closed", "failed", "completed",
+        "queued", "published", "publishing", "unknown"]
+        Message: is a string
+
+        :return: (Task status as string, last message)
+        """
+        status, status_message, _ = self._get_tasks_status([self.id])[0]
+        if self._data and status:
+            self._data.status = status
+            self._data.status_message = status_message
+
+        return status, status_message
+
     def _get_status(self):
         # type: () -> (Optional[str], Optional[str])
-        if self._offline_mode:
-            return tasks.TaskStatusEnum.created, 'offline'
+        """
+        retrieve Task status & message, But do not update the Task local status
+        this is important if we want to query in the background without breaking Tasks consistency
+
+        backwards compatibility,
+        :return: (status enum as string or None, str or None)
+        """
+        status, status_message, _ = self._get_tasks_status([self.id])[0]
+        return status, status_message
+
+    @classmethod
+    def _get_tasks_status(cls, ids):
+        # type: (List[str]) -> List[(Optional[str], Optional[str], Optional[str])]
+        """
+        :param ids: task IDs (str) to query
+        :return: list of tuples (status, status_message, task_id)
+        """
+        if cls._offline_mode:
+            return [(tasks.TaskStatusEnum.created, "offline", i) for i in ids]
 
         # noinspection PyBroadException
         try:
-            all_tasks = self.send(
-                tasks.GetAllRequest(id=[self.id], only_fields=['status', 'status_message']),
+            all_tasks = cls._get_default_session().send(
+                tasks.GetAllRequest(id=ids, only_fields=["status", "status_message", "id"]),
             ).response.tasks
-            return all_tasks[0].status, all_tasks[0].status_message
+            return [(task.status, task.status_message, task.id) for task in all_tasks]
         except Exception:
-            return None, None
+            return [(None, None, None) for _ in ids]
 
     def _get_last_update(self):
         # type: () -> (Optional[datetime])

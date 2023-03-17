@@ -74,6 +74,7 @@ from .binding.hydra_bind import PatchHydra
 from .binding.click_bind import PatchClick
 from .binding.fire_bind import PatchFire
 from .binding.jsonargs_bind import PatchJsonArgParse
+from .binding.gradio_bind import PatchGradio
 from .binding.frameworks import WeightsFileHandler
 from .config import (
     config, DEV_TASK_NO_REUSE, get_is_master_node, DEBUG_SIMULATE_REMOTE_TASK, DEV_DEFAULT_OUTPUT_URI,
@@ -402,7 +403,7 @@ class Task(_Task):
                    'matplotlib': True, 'tensorflow': ['*.hdf5, 'something_else*], 'tensorboard': True,
                    'pytorch': ['*.pt'], 'xgboost': True, 'scikit': True, 'fastai': True,
                    'lightgbm': True, 'hydra': True, 'detect_repository': True, 'tfdefines': True,
-                   'joblib': True, 'megengine': True, 'catboost': True
+                   'joblib': True, 'megengine': True, 'catboost': True, 'gradio': True
                }
 
             .. code-block:: py
@@ -689,6 +690,8 @@ class Task(_Task):
                     PatchFastai.update_current_task(task)
                 if should_connect("lightgbm"):
                     PatchLIGHTgbmModelIO.update_current_task(task)
+                if should_connect("gradio"):
+                    PatchGradio.update_current_task(task)
 
                 cls.__add_model_wildcards(auto_connect_frameworks)
 
@@ -1018,6 +1021,10 @@ class Task(_Task):
             If None is passed, returns all tasks within the project
         :param list tags: Filter based on the requested list of tags (strings) (Task must have all the listed tags)
             To exclude a tag add "-" prefix to the tag. Example: ["best", "-debug"]
+            To include All tags (instead of the default Or) use "__$all" before the tags, example:
+            ["__$all", "best", "experiment", "ever"]
+            To combine All tags and exclude a list of tags use "__$not" before the excluded tags, example:
+            ["__$all", "best", "experiment", "ever", "__$not", "internal", "test"]
         :param list additional_return_fields: Optional, if not provided return a list of Task IDs.
             If provided return dict per Task with the additional requested fields.
             Example: ``returned_fields=['last_updated', 'user', 'script.repository']`` will return a list of dict:
@@ -1518,7 +1525,7 @@ class Task(_Task):
                 else:
                     self._set_model_config(config_dict=configuration)
                 if isinstance(configuration_, dict):
-                    configuration_ = ProxyDictPostWrite(self, _update_config_dict, **configuration_)
+                    configuration_ = ProxyDictPostWrite(self, _update_config_dict, configuration_)
                 return configuration_
 
             if not running_remotely() or not (self.is_main_task() or self._is_remote_main_task()):
@@ -1724,9 +1731,14 @@ class Task(_Task):
 
     def close(self):
         """
-        Closes the current Task and changes its status to completed.
+        Closes the current Task and changes its status to "Completed".
         Enables you to manually shutdown the task.
-
+        This method does not terminate the current Python process, in contrast to :meth:`Task.mark_completed`.
+        
+        After having :meth:`Task.close`d a task, the respective object cannot be used anymore and
+        methods like :meth:`Task.connect` or :meth:`Task.connect_configuration` will throw a `ValueError`.
+        In order to obtain an object representing the task again, use methods like :meth:`Task.get_task`.
+        
         .. warning::
            Only call :meth:`Task.close` if you are certain the Task is not needed.
         """
